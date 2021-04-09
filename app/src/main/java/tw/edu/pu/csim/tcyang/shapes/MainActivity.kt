@@ -5,8 +5,10 @@ import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Size
 import android.widget.Toast
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
@@ -17,8 +19,13 @@ import com.karumi.dexter.listener.PermissionGrantedResponse
 import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.single.PermissionListener
 import kotlinx.android.synthetic.main.activity_main.*
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity(), PermissionListener {
+
+    private lateinit var cameraExecutor: ExecutorService
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -28,6 +35,7 @@ class MainActivity : AppCompatActivity(), PermissionListener {
                 .withPermission(android.Manifest.permission.CAMERA)
                 .withListener(this)
                 .check()
+        cameraExecutor = Executors.newSingleThreadExecutor()
     }
 
     override fun onPermissionGranted(p0: PermissionGrantedResponse?) {
@@ -72,13 +80,23 @@ class MainActivity : AppCompatActivity(), PermissionListener {
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
             //val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA  //自拍
 
+            // Set up the image analysis use case which will process frames in real time
+            val imageAnalyzer = ImageAnalysis.Builder()
+                    .setTargetResolution(Size(224, 224))
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build()
+
+            imageAnalyzer.setAnalyzer(cameraExecutor,  { image ->
+                txv.text = image.imageInfo.rotationDegrees.toString()
+            })
+
             try {
                 // Unbind use cases before rebinding
                 cameraProvider.unbindAll()
 
                 // Bind use cases to camera
                 cameraProvider.bindToLifecycle(
-                        this, cameraSelector, preview)
+                        this, cameraSelector, preview, imageAnalyzer)
 
             } catch(exc: Exception) {
                 Toast.makeText(this, "Use case binding failed: ${exc.message}",
