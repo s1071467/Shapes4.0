@@ -152,13 +152,29 @@ class MainActivity : AppCompatActivity(), PermissionListener {
                 // Creates inputs for reference.
                 val image = TensorImage.fromBitmap(bitmap)
                 // Runs model inference and gets result.
+                //val outputs = model.process(image)
+                //val probability = outputs.probabilityAsCategoryList
+                //txv.text = probability.toString()
+
                 val outputs = model.process(image)
-                val probability = outputs.probabilityAsCategoryList
-                txv.text = probability.toString()
+                        .probabilityAsCategoryList.apply {
+                            sortByDescending { it.score } // 排序，高匹配率優先
+                        }.take(2)
+                var Result:String = ""
+                for (output in outputs) {
+                    when (output.label) {
+                        "circle" -> Result += "圓形"
+                        "square" -> Result += "正方形"
+                        "star" -> Result += "星形"
+                        "triangle" -> Result = "三角形"
+                    }
+                    Result += ": " + String.format("%.1f%%", output.score * 100.0f) + ";  "
+                }
+                txv.text = Result
+
                 // Releases model resources if no longer used.
                 model.close()
             })
-
 
             try {
                 // Unbind use cases before rebinding
