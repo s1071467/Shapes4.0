@@ -6,11 +6,11 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Size
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
@@ -25,9 +25,11 @@ import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.single.PermissionListener
 import kotlinx.android.synthetic.main.activity_main.*
 import org.tensorflow.lite.support.image.TensorImage
-import tw.edu.pu.csim.tcyang.shapes.ml.Shapes
+import tw.edu.pu.csim.tcyang.shapes.ml.Model01
+
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+
 // Listener for the result of the ImageAnalyzer
 typealias ImageProxyListener = (bmp: Bitmap) -> Unit
 
@@ -148,7 +150,7 @@ class MainActivity : AppCompatActivity(), PermissionListener {
 
             //分析... 藉由ImageAnalyzer，將ImageProxy轉為Bitmap
             imageAnalyzer.setAnalyzer(cameraExecutor, ImageAnalyzer(this) { bitmap ->
-                val model = Shapes.newInstance(this)
+                val model = Model01.newInstance(this)
                 // Creates inputs for reference.
                 val image = TensorImage.fromBitmap(bitmap)
                 // Runs model inference and gets result.
@@ -159,14 +161,17 @@ class MainActivity : AppCompatActivity(), PermissionListener {
                 val outputs = model.process(image)
                         .probabilityAsCategoryList.apply {
                             sortByDescending { it.score } // 排序，高匹配率優先
-                        }.take(2)
+                        }.take(1)
                 var Result:String = ""
                 for (output in outputs) {
                     when (output.label) {
-                        "circle" -> Result += "圓形"
-                        "square" -> Result += "正方形"
-                        "star" -> Result += "星形"
+                        "smile" -> Result += "微笑"
+                        "no face" -> Result += "面無表情"
+
+                        /*"star" -> Result += "星形"
                         "triangle" -> Result = "三角形"
+
+                         */
                     }
                     Result += ": " + String.format("%.1f%%", output.score * 100.0f) + ";  "
                 }
